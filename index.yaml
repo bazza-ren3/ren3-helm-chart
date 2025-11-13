@@ -1,0 +1,12 @@
+apiVersion: v1
+entries:
+  ren3:
+  - apiVersion: v2
+    created: "2025-11-13T07:06:03.276260073Z"
+    description: A Helm chart for "ReN3" application
+    digest: a8456ecd16523c8f8cccca834a2cc8fe3ea91020dd04291abc10fb5822828809
+    name: ren3
+    urls:
+    - ren3-1.9.64.tgz
+    version: 1.9.64
+generated: "2025-11-13T07:06:03.276268846Z"
