@@ -1,0 +1,4 @@
+apiVersion: v2
+description: A Helm chart for "ReN3" application
+name: ren3
+version: 1.9.64

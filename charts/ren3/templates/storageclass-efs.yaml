@@ -1,0 +1,9 @@
+{{- if .Values.pvc.efs.enabled }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.pvc.efs.efsStorageClass | default "efs-sc" }}
+provisioner: {{ .Values.pvc.efs.csi.driver | default "efs.csi.aws.com" }}
+volumeBindingMode: {{ .Values.pvc.efs.csi.volumeBindingMode | default "Immediate" }}
+---
+{{- end }}

@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ren3.fullname" . }}-server
+  annotations:
+    secret.reloader.stakater.com/reload: "env-server,config-server"
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ren3.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      annotations:
+        deploymentTime: "{{ now | unixEpoch }}"
+        {{- with .Values.server.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "ren3.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+    spec:
+      serviceAccountName: {{ include "ren3.serviceAccountName" . }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      securityContext:
+        {{- toYaml .Values.server.securityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-server
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          ports:
+            {{- range .Values.server.containerPorts }}
+            - containerPort: {{ . }}
+            {{- end }}
+            {{- if .Values.server.env.normal }}
+          env:
+            {{- range $key, $value := .Values.server.env.normal }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- if and .Values.server.probe.enabled .Values.server.probe.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.server.probe.liveness.path }}
+              port: {{ .Values.server.probe.liveness.port }}
+            initialDelaySeconds: {{ .Values.server.probe.liveness.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.server.probe.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.server.probe.liveness.failureThreshold }}
+            periodSeconds: {{ .Values.server.probe.liveness.periodSeconds }}
+          {{- end }}
+          {{- if and .Values.server.probe.enabled .Values.server.probe.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.server.probe.readiness.path }}
+              port: {{ .Values.server.probe.readiness.port }}
+            initialDelaySeconds: {{ .Values.server.probe.readiness.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.server.probe.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.server.probe.readiness.failureThreshold }}
+            periodSeconds: {{ .Values.server.probe.readiness.periodSeconds }}
+          {{- end }}
+          volumeMounts:
+            {{- range .Values.server.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+      {{- with .Values.server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- toYaml .Values.server.volumes | nindent 8 }}
+  strategy:
+    type: Recreate

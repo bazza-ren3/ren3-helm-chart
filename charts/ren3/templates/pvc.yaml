@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ren3.fullname" . }}-data
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ if .Values.pvc.efs.enabled }}{{ .Values.pvc.efs.accessMode | default "ReadWriteMany" }}{{ else }}{{ .Values.pvc.ebs.accessMode | default "ReadWriteOnce" }}{{ end }}
+  resources:
+    requests:
+      storage: {{ if .Values.pvc.efs.enabled }}{{ .Values.pvc.efs.storage | default "10Gi" }}{{ else }}{{ .Values.pvc.ebs.storage | default "10Gi" }}{{ end }}
+  {{- if .Values.pvc.efs.enabled }}
+  storageClassName: {{ .Values.pvc.efs.efsStorageClass | default "efs-sc" | quote }}
+  {{- else if .Values.pvc.ebs.enabled }}
+  storageClassName: {{ .Values.pvc.ebs.storageClassName | default "gp2" | quote }}
+  {{- end }}

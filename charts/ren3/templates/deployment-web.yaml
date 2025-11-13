@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ren3.fullname" . }}-web
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ren3.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      annotations:
+        deploymentTime: "{{ now | unixEpoch }}"
+        {{- with .Values.web.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "ren3.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+    spec:
+      serviceAccountName: {{ include "ren3.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.web.securityContext | nindent 8 }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}-web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          ports:
+            {{- range .Values.web.containerPorts }}
+            - containerPort: {{ . }}
+            {{- end }}
+            {{- if .Values.web.env.normal }}
+          env:
+            {{- range $key, $value := .Values.web.env.normal }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- if and .Values.web.probe.enabled .Values.web.probe.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.web.probe.liveness.path }}
+              port: {{ .Values.web.probe.liveness.port }}
+            initialDelaySeconds: {{ .Values.web.probe.liveness.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.web.probe.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.web.probe.liveness.failureThreshold }}
+            periodSeconds: {{ .Values.web.probe.liveness.periodSeconds }}
+          {{- end }}
+          {{- if and .Values.web.probe.enabled .Values.web.probe.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.web.probe.readiness.path }}
+              port: {{ .Values.web.probe.readiness.port }}
+            initialDelaySeconds: {{ .Values.web.probe.readiness.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.web.probe.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.web.probe.readiness.failureThreshold }}
+            periodSeconds: {{ .Values.web.probe.readiness.periodSeconds }}
+          {{- end }}
+          volumeMounts:
+            {{- range .Values.web.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+      {{- with .Values.web.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- toYaml .Values.web.volumes | nindent 8 }}
+  strategy:
+    type: Recreate

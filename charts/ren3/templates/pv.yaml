@@ -1,0 +1,19 @@
+{{- if .Values.pvc.efs.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-efs-pv
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ .Values.pvc.efs.storage | default "10Gi" }}
+  volumeMode: Filesystem
+  accessModes:
+    - {{ .Values.pvc.efs.accessMode | default "ReadWriteMany" }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ .Values.pvc.efs.efsStorageClass | default "efs-sc" }}
+  csi:
+    driver: {{ .Values.pvc.efs.csi.driver | default "efs.csi.aws.com" }}
+    volumeHandle: {{ .Values.pvc.efs.csi.volumeHandle }}
+{{- end }}

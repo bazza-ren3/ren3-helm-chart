@@ -1,0 +1,39 @@
+{{- if .Values.frontendIngress.enabled -}}
+{{- $fullName := include "ren3.fullname" . -}}
+{{- $releaseNamespace := .Release.Namespace -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-frontend
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+  annotations:
+  {{- with .Values.frontendIngress.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.tls }}
+  tls:
+    {{- toYaml .Values.tls | nindent 4 }}
+  {{- end }}
+  {{- if .Values.frontendIngress.className }}
+  ingressClassName: {{ .Values.frontendIngress.className }}
+  {{- end }}
+  rules:
+    {{- range .Values.frontendIngress.hosts }}
+    - host: {{ $.Values.fqdn | default .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            {{- if .pathType }}
+            pathType: {{ .pathType }}
+            {{- end }}
+            backend:
+              service:
+                name: {{ .serviceName | default $fullName }}
+                port:
+                  number: {{ .svcPort }}
+          {{- end }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,29 @@
+{{- if .Values.ingestorCronJob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "ren3.fullname" . }}-ingestor-cronjob
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.ingestorCronJob.schedule | quote }}
+  successfulJobsHistoryLimit: {{ .Values.ingestorCronJob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.ingestorCronJob.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          imagePullSecrets:
+            {{- range .Values.imagePullSecrets }}
+            - name: {{ . }}
+            {{- end }}
+          containers:
+          - name: curl
+            image: "{{ .Values.ingestorCronJob.image.repository }}:{{ .Values.ingestorCronJob.image.tag }}"
+            imagePullPolicy: {{ .Values.ingestorCronJob.image.pullPolicy }}
+            command:
+            - /bin/sh
+            - -c
+            - curl -s {{ .Values.ingestorCronJob.curlUrl }}
+          restartPolicy: OnFailure
+{{- end }}

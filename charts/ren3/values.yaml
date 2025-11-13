@@ -1,0 +1,413 @@
+# Default values for ren3.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+# image:
+#   repository: ren3-server-platform-rhel
+#   pullPolicy: Always
+#   # Overrides the image tag whose default is the chart appVersion.
+#   tag: "v1.9.7"
+
+server:
+  image:
+    repository: sg37/ren3-server-platform-rhel
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "v1.9.64"
+
+  replicaCount: 1
+
+  podAnnotations: {}
+
+  resources:
+    limits:
+      memory: "1Gi"
+      cpu: "5000m"
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+  
+  containerPorts:
+    - 5000
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1002
+    runAsGroup: 1002
+    fsGroup: 1002
+
+  env:
+    # non sensitive variables
+    normal: {}
+
+    # sensitive variables should be handled by secrets manager
+
+  service:
+    type: ClusterIP
+    ports:
+      - name: ren3-server
+        port: 5000
+        targetPort: 5000
+
+  volumeMounts:
+    - name: server-env
+      mountPath: "/usr/app/server/.env"
+      subPath: .env
+    - name: server-config
+      mountPath: "usr/app/rn3-data/configs/server/config.json"
+      subPath: config.json
+    - name: ren3-data
+      mountPath: "/usr/app/rn3-data"
+
+  volumes:
+    - name: server-env
+      secret:
+        secretName: env-server
+    - name: server-config
+      secret:
+        secretName: config-server
+    - name: ren3-data
+      persistentVolumeClaim:
+        claimName: ren3-data
+
+  probe:
+    enabled: false
+    liveness:
+      enabled: true
+      path: /health
+      port: http
+      initialDelaySeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+      periodSeconds: 30
+    readiness:
+      enabled: false
+      path: /health
+      port: http
+      initialDelaySeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+      periodSeconds: 30
+  
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+ingestor:
+  image:
+    repository: sg37/ren3-ingester-platform-rhel
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "v1.9.53"
+
+  replicaCount: 1
+
+  podAnnotations: {}
+
+  resources:
+    limits:
+      memory: "1Gi"
+      cpu: "5000m"
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+  
+  containerPorts:
+    - 5001
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1002
+    runAsGroup: 1002
+    fsGroup: 1002
+
+  env:
+    # non sensitive variables
+    normal: {}
+
+    # sensitive variables should be handled by secrets manager
+
+  service:
+    type: ClusterIP
+    ports:
+      - name: ren3-ingestor
+        port: 5001
+        targetPort: 5001
+
+  volumeMounts:
+    - name: ingestor-env
+      mountPath: "/usr/app/ingestor/.env"
+      subPath: .env
+    - name: ingestor-config
+      mountPath: "usr/app/rn3-data/configs/ingestor/config.json"
+      subPath: config.json
+    - name: ren3-data
+      mountPath: "/usr/app/rn3-data"
+
+  volumes:
+    - name: ingestor-env
+      secret:
+        secretName: env-ingestor
+    - name: ingestor-config
+      secret:
+        secretName: config-ingestor
+    - name: ren3-data
+      persistentVolumeClaim:
+        claimName: ren3-data
+
+  probe:
+    enabled: false
+    liveness:
+      enabled: true
+      path: /health
+      port: http
+      initialDelaySeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+      periodSeconds: 30
+    readiness:
+      enabled: false
+      path: /health
+      port: http
+      initialDelaySeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+      periodSeconds: 30
+  
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+ingestorCronJob:
+  enabled: true
+  schedule: "*/3 * * * *"
+  successfulJobsHistoryLimit: 3 # Keep the last 5 successful job runs
+  failedJobsHistoryLimit: 2     # Keep the last 2 failed job runs
+  image:
+    repository: curlimages/curl
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "latest"
+  curlUrl: "http://ren3-ingestor:5001/processDocsCycle"
+
+web:
+  image:
+    repository: sg37/ren3-web-platform-rhel
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "v1.9.56"
+
+  replicaCount: 1
+
+  podAnnotations: {}
+
+  resources:
+    limits:
+      memory: "1Gi"
+      cpu: "5000m"
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+  
+  containerPorts:
+    - 3000
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1002
+    runAsGroup: 1002
+    fsGroup: 1002
+
+  env:
+    # non sensitive variables
+    normal: {}
+
+    # sensitive variables should be handled by secrets manager
+
+  service:
+    type: ClusterIP
+    ports:
+      - name: ren3-web
+        port: 3000
+        targetPort: 3000
+
+  volumeMounts:
+    - name: react-env
+      mountPath: "/usr/app/build/config/env.js"
+      subPath: env.js
+    - name: web-logo
+      mountPath: "/usr/app/build/images/app_logo.svg"
+      subPath: app_logo.svg
+
+  volumes:
+    - name: react-env
+      configMap:
+        name: ren3-web-env
+    - name: web-logo
+      configMap:
+        name: ren3-web-logo
+
+  probe:
+    enabled: false
+    liveness:
+      enabled: true
+      path: /health
+      port: http
+      initialDelaySeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+      periodSeconds: 30
+    readiness:
+      enabled: false
+      path: /health
+      port: http
+      initialDelaySeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+      periodSeconds: 30
+  
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+  configMapData:
+    env.js: |-
+      window.__ENV__ = {
+        REACT_APP_BACKEND_URL: 'https://example.ren3.ai/backend/',
+        REACT_APP_DOCUMENTVIEWER_URL: '',
+        REACT_APP_DOCUMENTEDITOR_URL: '',
+        REACT_APP_PORTAL_URL: 'https://example.ren3.ai/'
+      }
+
+  configMapLogo: true
+
+
+# nameOverride: ""
+# fullnameOverride: ""
+
+imagePullSecrets:
+  - ren3-regcred
+
+serviceAccount:
+  annotations: {}
+  name: ""
+
+tls:
+  - hosts:
+      - example.ren3.ai
+    secretName: tls-secret
+
+pvc:
+  ebs:
+    enabled: true
+    accessMode: ReadWriteMany
+    storage: 200Gi
+    storageClassName: "filesystem-dynamic"
+    #driver: ebs.csi.aws.com
+  efs:
+    enabled: false
+    efsStorageClass: "efs-sc"
+    accessMode: ReadWriteMany
+    storage: 200Gi           
+    csi:
+      driver: efs.csi.aws.com
+      volumeBindingMode: Immediate
+      volumeHandle: fs-asdfasdfasdfasdfasd::fsap-sdfsfsdfsafdsafads
+
+backendIngress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "36000"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "36000"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "36000"
+    nginx.ingress.kubernetes.io/proxy-body-size: 900m
+    nginx.ingress.kubernetes.io/client-body-buffer-size: 900m
+  className: "nginx"
+  hosts:
+    - host: example.ren3.ai
+      paths:
+        - path: /backend(/|$)(.*)
+          pathType: ImplementationSpecific
+          serviceName: ren3-server
+          svcPort: 5000
+        # - path: /ingestor(/|$)(.*)
+        #   pathType: ImplementationSpecific
+        #   serviceName: ren3-ingestor
+        #   svcPort: 5001
+
+frontendIngress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "36000"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "36000"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "36000"
+    nginx.ingress.kubernetes.io/proxy-body-size: 900m
+    nginx.ingress.kubernetes.io/client-body-buffer-size: 900m
+    #nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  className: "nginx"
+  hosts:
+    - host: example.ren3.ai
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceName: ren3-web
+          svcPort: 3000
+
+
+vault:
+  enabled: false
+  # clusterSecretStore:
+  #   server: "https://example-vault.ren3.ai"
+  #   path: ren3
+  #   version: v2
+  #   caProvider:
+  #     type: Secret
+  #     name: vault-ca-cert
+  #     key: ca.crt
+  #     namespace: external-secrets
+  #   auth:
+  #     appRole:
+  #       path: ren3
+  #       roleId: "enter-role-id-for-vault"
+  #       secretRef:
+  #         name: vault-ren3-prod-approle-secret
+  #         namespace: external-secrets
+  #         key: secretId
+  # externalSecret:
+  #   server:
+  #     target:
+  #       nameEnv: env-server
+  #       nameConfig: config-server
+  #       dataFromKeyEnv: prod/server/env
+  #       dataFromKeyConfig: prod/server/config.json
+  #   ingestor:
+  #     target:
+  #       nameEnv: env-ingestor
+  #       nameConfig: config-ingestor
+  #       dataFromKeyEnv: prod/ingestor/env
+  #       dataFromKeyConfig: prod/ingestor/config.json
+
+
+autoscaling:
+  enabled: false
+  # minReplicas: 2
+  # maxReplicas: 10
+  # targetCPUUtilizationPercentage: 60
+  # targetMemoryUtilizationPercentage: 80
+
+env:
+  # non sensitive variables
+  normal: {}
+
+  # sensitive variables
+  secret: {}

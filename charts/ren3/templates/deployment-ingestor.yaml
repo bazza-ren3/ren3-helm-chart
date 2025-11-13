@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ren3.fullname" . }}-ingestor
+  annotations:
+    secret.reloader.stakater.com/reload: "env-ingestor,config-ingestor"
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingestor
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ren3.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ingestor
+  template:
+    metadata:
+      annotations:
+        deploymentTime: "{{ now | unixEpoch }}"
+        {{- with .Values.ingestor.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "ren3.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ingestor
+    spec:
+      serviceAccountName: {{ include "ren3.serviceAccountName" . }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      securityContext:
+        {{- toYaml .Values.ingestor.securityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-ingestor
+          image: "{{ .Values.ingestor.image.repository }}:{{ .Values.ingestor.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.ingestor.image.pullPolicy }}
+          ports:
+            {{- range .Values.ingestor.containerPorts }}
+            - containerPort: {{ . }}
+            {{- end }}
+            {{- if .Values.ingestor.env.normal }}
+          env:
+            {{- range $key, $value := .Values.ingestor.env.normal }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- if and .Values.ingestor.probe.enabled .Values.ingestor.probe.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.ingestor.probe.liveness.path }}
+              port: {{ .Values.ingestor.probe.liveness.port }}
+            initialDelaySeconds: {{ .Values.ingestor.probe.liveness.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.ingestor.probe.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.ingestor.probe.liveness.failureThreshold }}
+            periodSeconds: {{ .Values.ingestor.probe.liveness.periodSeconds }}
+          {{- end }}
+          {{- if and .Values.ingestor.probe.enabled .Values.ingestor.probe.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.ingestor.probe.readiness.path }}
+              port: {{ .Values.ingestor.probe.readiness.port }}
+            initialDelaySeconds: {{ .Values.ingestor.probe.readiness.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.ingestor.probe.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.ingestor.probe.readiness.failureThreshold }}
+            periodSeconds: {{ .Values.ingestor.probe.readiness.periodSeconds }}
+          {{- end }}
+          volumeMounts:
+            {{- range .Values.ingestor.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.ingestor.resources | nindent 12 }}
+      {{- with .Values.ingestor.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ingestor.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ingestor.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- toYaml .Values.ingestor.volumes | nindent 8 }}
+  strategy:
+    type: Recreate
