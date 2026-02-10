@@ -1,4 +1,4 @@
 apiVersion: v2
-name: ren3
+name: ren3-local
 description: A Helm chart for "ren3" application
 version: "1.9.19"
