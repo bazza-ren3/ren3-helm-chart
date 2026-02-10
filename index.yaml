@@ -9,4 +9,12 @@ entries:
     urls:
     - ren3-1.9.64.tgz
     version: 1.9.64
-generated: "2025-11-13T07:06:03.276268846Z"
+  - apiVersion: v2
+    created: "2026-02-10T02:10:24.506606703Z"
+    description: A Helm chart for "ren3" application
+    digest: aa324907c9cd880fa5272456da87bfad8b21f30f1f40fe964334f80bf44e4b48
+    name: ren3
+    urls:
+    - ren3-1.9.19.tgz
+    version: 1.9.19
+generated: "2026-02-10T02:10:24.506622051Z"
