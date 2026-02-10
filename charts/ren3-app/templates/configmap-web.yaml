@@ -1,0 +1,10 @@
+{{- if .Values.web.configMapData -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ren3.fullname" . }}-web-env
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+data:
+  {{- .Values.web.configMapData | toYaml | nindent 4 }}
+{{- end }}

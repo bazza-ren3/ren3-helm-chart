@@ -1,0 +1,11 @@
+{{- if .Values.web.configMapLogo -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ren3.fullname" . }}-web-logo
+  labels:
+    {{- include "ren3.labels" . | nindent 4 }}
+data:
+  app_logo.svg: |
+    {{- .Files.Get "files/app_logo.svg" | nindent 4  }}
+{{- end }}
