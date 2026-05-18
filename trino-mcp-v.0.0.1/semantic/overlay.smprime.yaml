@@ -1,0 +1,35 @@
+# SM Prime — PO + SharePoint quotation/canvass federation (copy to overlay.yaml).
+# Table/column names must match your Trino catalog; introspection + sample SQL use these FQNs.
+version: 1
+
+entity_aliases:
+  open_po: hive.01_stg.stg_open_po_summary
+  quotation_canvass: hive.01_stg.stg_quotation_canvass
+  po_summary: hive.01_stg.stg_open_po_summary
+
+relationships:
+  - name: po_to_quotation
+    from_entity: stg_open_po_summary
+    to_entity: stg_quotation_canvass
+    join_type: many_to_one
+    condition: >-
+      TRIM(CAST("hive"."01_stg"."stg_open_po_summary".vendor_number AS varchar))
+      = TRIM(CAST("hive"."01_stg"."stg_quotation_canvass".vendor_number AS varchar))
+
+  - name: quotation_to_po
+    from_entity: stg_quotation_canvass
+    to_entity: stg_open_po_summary
+    join_type: many_to_one
+    condition: >-
+      TRIM(CAST("hive"."01_stg"."stg_quotation_canvass".vendor_number AS varchar))
+      = TRIM(CAST("hive"."01_stg"."stg_open_po_summary".vendor_number AS varchar))
+
+glossary:
+  - term: quotation
+    maps_to: { entity: stg_quotation_canvass }
+    aliases: [canvass, canvass sheet, sharepoint quotation, quote]
+  - term: sharepoint
+    maps_to: { entity: stg_quotation_canvass }
+    aliases: [scanned pdf, quotation files]
+
+metrics: []

@@ -1,0 +1,28 @@
+# Optional semantic overlay — copy to overlay.yaml and set SEMANTIC_OVERLAY_PATH.
+# Entities/columns come from Trino introspection; only add what the LLM cannot infer.
+version: 1
+
+# Friendly entity name → fully qualified table (must exist in Trino).
+entity_aliases:
+  # store: hive.retail.stores
+
+relationships: []
+  # - name: txn_to_store
+  #   from_entity: pos_transaction
+  #   to_entity: store
+  #   join_type: many_to_one
+  #   condition: "lake.retail.pos_transactions.store_id = crm.public.stores.id"
+
+metrics: []
+  # - name: revenue
+  #   description: Total sales revenue USD
+  #   base_entity: pos_line_item
+  #   expression: "SUM(lake.retail.pos_line_items.line_total)"
+  #   default_dimensions: [region, category]
+
+glossary: []
+  # - term: sales
+  #   maps_to: { metric: revenue }
+  #   aliases: [revenue, turnover]
+
+# SM Prime PO + SharePoint federation: see overlay.smprime.yaml

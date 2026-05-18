@@ -1,0 +1,161 @@
+version: 1
+source: REN3_SAMPLE_QUESTIONS_QUERIES.xlsx
+queries:
+- id: q001_how_many_total_vendors_are_there
+  question: How many total vendors are there
+  sql: select count(distinct vendor_number) from "hive"."01_stg"."stg_open_po_summary"
+  category: PO
+  tags: []
+  notes: Listing the total count of vendors
+- id: q002_list_the_category_po_aging_and_count_the_vendors
+  question: List the category PO aging and count the vendors
+  sql: 'select cat_po_aging, count(distinct vendor_number) from "hive"."01_stg"."stg_open_po_summary"
+
+    group by cat_po_aging'
+  category: PO
+  tags: []
+  notes: Listing count of vendors per category of PO aging
+- id: q003_list_the_vendor_name_po_value_for_the_top_10_ven
+  question: List the vendor name, PO value for the top 10 vendors based on PO value with aging more than 360
+  sql: 'select vendor_name,sum_po_value from (
+
+    select vendor_name, sum(sum_ven_po_value) as sum_po_value
+
+    from "hive"."01_stg"."stg_open_po_summary"
+
+    where avg_ven_po_aging_days > 360
+
+    group by vendor_name
+
+    ) order by sum_po_value desc limit 10'
+  category: PO
+  tags: []
+  notes: Listing top 10 vendors based on PO value for those with aging of more than 360 days
+- id: q004_for_edd_list_the_porg_vendor_name_po_valule_for_
+  question: For EDD, List the PORG, VENDOR NAME, PO VALULE for the top 10 records based on PO VALUE
+  sql: "select vendor_name,sum_po_value from (\nselect porg_desc, vendor_name, sum(sum_ven_po_value) as sum_po_value\nfrom \"hive\".\"01_stg\".\"stg_open_po_summary\" \nwhere porg_desc = 'EDD'\ngroup by porg_desc,vendor_name\n) order by sum_po_value desc limit 10"
+  category: PO
+  tags: []
+  notes: Listing the top 10 EDD vendors based on PO value
+- id: q005_list_the_category_gr_aging_and_count_the_vendors
+  question: List the category GR aging and count the vendors
+  sql: 'select cat_GR_aging, count(distinct vendor_number) from "hive"."01_stg"."stg_open_po_summary"
+
+    group by cat_GR_aging'
+  category: PO
+  tags: []
+  notes: Counting vendors based on GR aging
+- id: q006_list_the_gr_aging_category_count_the_vendors_the
+  question: List the GR Aging Category, count the vendors, then sum the total PO value, then sum the GR amount for each GR Aging Category
+  sql: "select cat_GR_aging, count(distinct vendor_number),\nsum(sum_ven_po_value), sum(sum_ven_gr_amt)\n from \"hive\".\"01_stg\".\"stg_open_po_summary\"\ngroup by cat_GR_aging"
+  category: PO
+  tags: []
+  notes: Computing for the total PO value and GR amount for each GR Aging category
+- id: q007_list_the_gr_aging_category_count_the_vendors_the
+  question: List the GR Aging Category, count the vendors, then sum the total PO value, then sum the GR amount,  and compute the percentage GR amount against total PO value for each GR Aging Category
+  sql: "select *,( sum_gr_amt/sum_po_value )*100\nfrom (\n    select cat_GR_aging, count(distinct vendor_number),\n    sum(sum_ven_po_value) sum_po_value, sum(sum_ven_gr_amt) sum_gr_amt\n    from \"hive\".\"01_stg\".\"stg_open_po_summary\"\n    group by cat_GR_aging\n)"
+  category: PO
+  tags: []
+  notes: Computing for the total PO value and GR amount for each GR Aging category, then computing the percentage of the amount against the PO value
+- id: q008_for_sample_vendor_name_list_its_vendor_name_porg
+  question: For SAMPLE VENDOR NAME, List its vendor name, PORG description, PO value, category GR aging, GR amount, and percentage of GR amount per category GR aging
+  sql: "select vendor_name,porg_desc,cat_gr_aging,sum(sum_ven_po_value) as sum_po_value,sum(sum_ven_gr_amt) as sum_gr_amt\n    from \"hive\".\"01_stg\".\"stg_open_po_summary\"\n    where trim(vendor_name) = 'SAMPLE VENDOR NAME'\n    group by vendor_name,porg_desc,cat_gr_aging"
+  category: PO
+  tags: []
+  notes: Getting details for a specific vendor
+- id: q009_list_the_branch_and_total_count_po_doc_where_the
+  question: List the Branch, and total Count PO doc where the project type is blank of the top 10 branch based on total Count PO doc
+  sql: "SELECT DESCRIPTION_BRANCH, SUM_PO_VALUE,TOTAL_PO_DOC FROM (\n  select description_branch, sum(sum_ven_po_value) as sum_po_value , sum(cnt_porg_po_doc) as total_po_doc\n    from \"hive\".\"01_stg\".\"stg_open_po_summary\" \n    where (\"project type\" is null or \"project type\" = '' or \"project type\"= 'NOT DEFINED')\n    group by description_branch\n) order by total_po_doc desc limit 10"
+  category: PO
+  tags: []
+  notes: Getting the top 10 branches with the most blank Project Type
+- id: q010_list_the_branches_their_project_type_and_the_per
+  question: List the branches, their project type and the percentage of po docs of each project type
+  sql: "select *, (cast(total_po_doc as decimal(38,2))/cast(total_cnt_branchproject as decimal(38,2) ))* 100 as percent_po_doc\nfrom \n(\n    SELECT *,\n    sum(total_po_doc) over (partition by  description_branch  ) as total_cnt_branchproject\n    FROM \n    (\n        select description_branch, \"project type\", sum(cnt_porg_po_doc) as total_po_doc\n        from \"hive\".\"01_stg\".\"stg_open_po_summary\"  \n        group by description_branch, \"project type\" \n    )  order by description_branch, \"project type\"\n)\n    ;"
+  category: PO
+  tags: []
+  notes: Percentage of project types per branch
+- id: q011_list_the_porg_with_5_and_above_blank_project_typ
+  question: List the PORG with 5% and above blank project type
+  sql: "with main AS (\n    select *, (cast(total_po_doc as decimal(38,2))/cast(total_cnt_branchproject as decimal(38,2) ))* 100 as percent_po_doc\n    from \n    (\n        SELECT *,\n        sum(total_po_doc) over (partition by  porg_desc  ) as total_cnt_branchproject\n        FROM \n        (\n            select porg_desc, \"project type\", sum(cnt_porg_po_doc) as total_po_doc\n            from \"hive\".\"01_stg\".\"stg_open_po_summary\"  \n            group by porg_desc, \"project type\" \n        )  order by porg_desc, \"project type\"\n    ) \n)\n\nselect * from main where percent_po_doc >= 5\nand \n(\"project type\" = '' or \"project type\" is null or \"project type\" = 'NOT DEFINED')\norder by percent_po_doc desc"
+  category: PO
+  tags: []
+  notes: Checking of blank project types
+- id: q012_list_the_top_10_architectural_vendors_based_on_t
+  question: List the top 10 architectural vendors based on total PO value
+  sql: "select   vendor_name, combinedtags, sum(sum_ven_po_value) as total_po_value\nfrom \"hive\".\"01_stg\".\"stg_open_po_summary\" \nwhere upper(combinedtags) like '%ARCHITECT%'\ngroup by vendor_name,combinedtags\norder by total_po_value desc limit 10\n--NOTE: REN3 SHOULD ALSO BE ABLE TO CAPTURE THOSE WITH SIMILAR MEANING SUCH AS \"ARCHI\", \"ARCHITECTURAL\", \"ARCHITECTURE\", ETC"
+  category: PO
+  tags: []
+  notes: Checking for tagging of vendor types
+- id: q013_list_the_top_10_vendors_with_wbs_related_to_cons
+  question: List the top 10 vendors with WBS related to construction works
+  sql: "select   vendor_name, sum(sum_ven_po_value) as total_po_value\nfrom \"hive\".\"01_stg\".\"stg_open_po_summary\" \nwhere upper(wbs_desc) like '%CONST%'\ngroup by vendor_name\norder by total_po_value desc limit 10 \n--NOTE: REN3 SHOULD ALSO BE ABLE TO CAPTURE THOSE WITH SIMILAR MEANING THAT FALL UNDER CONTRUCTION SUCH AS \"CONSTRUCTION\" \"STRUCTURAL WORKS\" ETC"
+  category: PO
+  tags: []
+  notes: Checking for vendors with WBS related tagging
+- id: q014_list_all_the_porg_with_vendors_that_have_no_foun
+  question: List all the PORG with vendors that have no found quotation/canvass
+  sql: |
+    SELECT DISTINCT
+      po.porg_desc,
+      po.vendor_name,
+      po.vendor_number
+    FROM "hive"."01_stg"."stg_open_po_summary" po
+    LEFT JOIN "hive"."01_stg"."stg_quotation_canvass" qc
+      ON TRIM(CAST(po.vendor_number AS varchar)) = TRIM(CAST(qc.vendor_number AS varchar))
+    WHERE qc.vendor_number IS NULL
+    ORDER BY po.porg_desc, po.vendor_name
+  category: PO
+  tags: [sharepoint, federation]
+  notes: |
+    PO vendors with no matching quotation/canvass row (SharePoint-extracted staging).
+    Confirm table/columns exist in Trino; rename stg_quotation_canvass if your catalog differs.
+- id: q015_based_on_the_found_quotations_canvass_of_each_ve
+  question: Based on the found quotations/canvass of each vendor, compare the percentage of actual vs. bidding value and get the top 10 vendors with the most difference
+  sql: |
+    SELECT
+      vendor_name,
+      total_po_value,
+      total_bidding_value,
+      CAST(total_po_value AS decimal(38, 2))
+        / NULLIF(CAST(total_bidding_value AS decimal(38, 2)), 0) AS percent_po_over_bidding
+    FROM (
+      SELECT
+        po.vendor_name,
+        SUM(po.sum_ven_po_value) AS total_po_value,
+        SUM(qc.bidding_value) AS total_bidding_value
+      FROM "hive"."01_stg"."stg_open_po_summary" po
+      INNER JOIN "hive"."01_stg"."stg_quotation_canvass" qc
+        ON TRIM(CAST(po.vendor_number AS varchar)) = TRIM(CAST(qc.vendor_number AS varchar))
+      GROUP BY po.vendor_name
+    ) agg
+    WHERE total_bidding_value IS NOT NULL AND total_bidding_value <> 0
+    ORDER BY percent_po_over_bidding DESC
+    LIMIT 10
+  category: PO
+  tags: [sharepoint, federation]
+  notes: |
+    Ratio of actual PO value to quotation bidding value per vendor (top 10 highest ratio).
+    Requires stg_quotation_canvass.bidding_value; adjust table name if needed.
+- id: q016_compare_the_delivery_date_in_days_from_quotation
+  question: Compare the delivery date in days from quotations and GR days from actual PO and get the average difference, get the top 10 vendors with top average difference
+  sql: |
+    SELECT
+      po.vendor_name,
+      AVG(
+        CAST(po.avg_ven_gr_aging_days AS double)
+        - CAST(qc.avg_quote_delivery_date AS double)
+      ) AS avg_diff_days
+    FROM "hive"."01_stg"."stg_open_po_summary" po
+    INNER JOIN "hive"."01_stg"."stg_quotation_canvass" qc
+      ON TRIM(CAST(po.vendor_number AS varchar)) = TRIM(CAST(qc.vendor_number AS varchar))
+    WHERE po.avg_ven_gr_aging_days IS NOT NULL
+      AND qc.avg_quote_delivery_date IS NOT NULL
+    GROUP BY po.vendor_name
+    ORDER BY avg_diff_days DESC
+    LIMIT 10
+  category: PO
+  tags: [sharepoint, federation]
+  notes: |
+    GR aging days (PO summary) minus quote delivery days (SharePoint staging), averaged per vendor.
+    Confirm avg_quote_delivery_date exists on quotation table or replace with avg(quote_delivery_date).

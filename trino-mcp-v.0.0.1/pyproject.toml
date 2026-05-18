@@ -1,0 +1,25 @@
+[project]
+name = "trino-mcp"
+version = "0.1.0"
+description = "Natural language SQL on Apache Trino via MCP"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.5.0",
+    "trino>=0.329.0",
+    "pydantic-settings>=2.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "openpyxl>=3.1.5",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

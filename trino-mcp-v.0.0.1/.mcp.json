@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "trino": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${workspaceFolder}",
+        "python",
+        "server.py"
+      ],
+      "envFile": "${workspaceFolder}/.env"
+    }
+  }
+}
